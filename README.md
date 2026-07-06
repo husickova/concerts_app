@@ -1,4 +1,4 @@
-# Where's the Music?
+# Where's The Concert? (WTC)
 
 A web app that watches for concerts by your favourite bands and emails you when a new show appears.
 

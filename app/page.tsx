@@ -11,7 +11,7 @@ export default async function HomePage() {
       <div className="hero">
         <span className="kicker">A concert watchdog for people who hate missing out</span>
         <h1>
-          Where&apos;s the <em>Music?</em>
+          Where&apos;s The <em>Concert?</em>
         </h1>
         <p>
           Pick your bands and your countries. Once a day we sweep ticketing sites, concert
