@@ -11,11 +11,11 @@ export default async function HomePage() {
       <div className="hero">
         <span className="kicker">A concert watchdog for people who hate missing out</span>
         <h1>
-          Gig <em>Alert</em>
+          Where&apos;s the <em>Party?</em>
         </h1>
         <p>
           Pick your bands and your countries. Once a day we sweep ticketing sites, concert
-          databases and Google — and email you the moment a new show turns up. Every gig,
+          databases and Google — and email you the moment a new show turns up. Every show,
           announced once.
         </p>
       </div>

@@ -1,4 +1,4 @@
-# Gig Alert
+# Where's the Party?
 
 A web app that watches for concerts by your favourite bands and emails you when a new show appears.
 
