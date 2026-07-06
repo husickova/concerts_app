@@ -34,9 +34,12 @@ export const ticketmaster: ConcertProvider = {
       .map((ev): ConcertHit => {
         const venue = ev?._embedded?.venues?.[0];
         const localDate = ev?.dates?.start?.localDate;
+        const endDate = ev?.dates?.end?.localDate;
         return {
           artistName,
+          title: ev?.name ?? null,
           date: localDate ? new Date(`${localDate}T12:00:00Z`) : null,
+          endDate: endDate && endDate !== localDate ? new Date(`${endDate}T12:00:00Z`) : null,
           city: venue?.city?.name ?? null,
           country: venue?.country?.countryCode ?? countryCode,
           venue: venue?.name ?? null,

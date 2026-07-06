@@ -27,18 +27,21 @@ export const bandsintown: ConcertProvider = {
         return c === wantedCountry || c === countryCode.toLowerCase();
       })
       .map((ev: any): ConcertHit => {
+        // Prefer the ticket-shop link when the event has one; fall back to the event page.
         const offer = Array.isArray(ev?.offers)
           ? ev.offers.find((o: any) => o?.type === "Tickets" && o?.url)
           : null;
         return {
           artistName,
+          title: ev?.title ?? null,
           date: ev?.datetime ? new Date(ev.datetime) : null,
+          endDate: null,
           city: ev?.venue?.city ?? null,
           country: countryCode,
           venue: ev?.venue?.name ?? null,
           url: offer?.url ?? ev?.url,
           source: "bandsintown",
-          isTicketing: false,
+          isTicketing: Boolean(offer),
         };
       })
       .filter((h) => Boolean(h.url));

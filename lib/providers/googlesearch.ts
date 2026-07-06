@@ -47,10 +47,11 @@ export const googleSearch: ConcertProvider = {
         const isTicketing = TICKETING_DOMAINS.some((d) => link.includes(d));
         return {
           artistName,
+          title: it?.title ?? null,
           date: null,
           city: null,
           country: countryCode,
-          venue: it?.title ?? null,
+          venue: null,
           url: link,
           source: "google",
           isTicketing,

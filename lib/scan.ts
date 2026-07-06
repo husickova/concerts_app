@@ -14,10 +14,142 @@ export type ScanResult = {
   errors: string[];
 };
 
+const DAY = 24 * 60 * 60 * 1000;
+
+/** A hit (or several merged festival-day hits) ready to be stored. */
+type EventGroup = ConcertHit & { endDate: Date | null };
+
+/**
+ * Merge hits of the same artist in the same city on consecutive days into one
+ * multi-day event (festival). Returns groups with date = first day and
+ * endDate = last day (or null for single-day shows).
+ */
+export function groupFestivalDays(hits: ConcertHit[]): EventGroup[] {
+  const dated = hits.filter((h) => h.date && h.city);
+  const undated = hits.filter((h) => !h.date || !h.city);
+
+  const byPlace = new Map<string, ConcertHit[]>();
+  for (const hit of dated) {
+    const key = `${normalizeName(hit.artistName)}|${normalizeName(hit.city!)}`;
+    const arr = byPlace.get(key);
+    if (arr) arr.push(hit);
+    else byPlace.set(key, [hit]);
+  }
+
+  const groups: EventGroup[] = undated.map((h) => ({ ...h, endDate: h.endDate ?? null }));
+
+  for (const place of byPlace.values()) {
+    place.sort((a, b) => a.date!.getTime() - b.date!.getTime());
+    let chain: ConcertHit[] = [];
+    const flush = () => {
+      if (chain.length === 0) return;
+      // Prefer a ticketing hit as the representative (its URL points to ticket sales).
+      const rep = chain.find((h) => h.isTicketing) ?? chain[0];
+      const start = chain[0].date!;
+      const end = chain.reduce((max, h) => {
+        const e = h.endDate ?? h.date!;
+        return e > max ? e : max;
+      }, start);
+      groups.push({
+        ...rep,
+        title: chain.find((h) => h.title)?.title ?? null,
+        date: start,
+        endDate: end.getTime() > start.getTime() ? end : null,
+      });
+      chain = [];
+    };
+    for (const hit of place) {
+      const prev = chain[chain.length - 1];
+      const prevEnd = prev ? (prev.endDate ?? prev.date!) : null;
+      // Same or next day -> same multi-day event; bigger gap -> separate show.
+      if (prevEnd && hit.date!.getTime() - prevEnd.getTime() > 1.5 * DAY) flush();
+      chain.push(hit);
+    }
+    flush();
+  }
+
+  return groups;
+}
+
+/**
+ * Store a group in the DB, reusing an existing concert when the date ranges of
+ * the same artist + city overlap (so day 2 of a festival found later does not
+ * create a duplicate). Returns the concert id.
+ */
+async function upsertConcert(group: EventGroup): Promise<string> {
+  const artistNormalized = normalizeName(group.artistName);
+
+  if (group.date && group.city) {
+    const start = group.date;
+    const end = group.endDate ?? group.date;
+    const cityNorm = normalizeName(group.city);
+    const candidates = await prisma.concert.findMany({
+      where: {
+        artistNormalized,
+        date: { gte: new Date(start.getTime() - 2 * DAY), lte: new Date(end.getTime() + 2 * DAY) },
+      },
+    });
+    const existing = candidates.find((c) => {
+      if (!c.date || !c.city || normalizeName(c.city) !== cityNorm) return false;
+      const cEnd = c.endDate ?? c.date;
+      // ranges touch or overlap (with a one-day tolerance)
+      return c.date.getTime() <= end.getTime() + 1.5 * DAY && cEnd.getTime() >= start.getTime() - 1.5 * DAY;
+    });
+
+    if (existing) {
+      const newStart = start < existing.date! ? start : existing.date!;
+      const existingEnd = existing.endDate ?? existing.date!;
+      const newEnd = end > existingEnd ? end : existingEnd;
+      const upgrade = group.isTicketing && !existing.isTicketing;
+      const updated = await prisma.concert.update({
+        where: { id: existing.id },
+        data: {
+          date: newStart,
+          endDate: newEnd.getTime() > newStart.getTime() ? newEnd : null,
+          title: existing.title ?? group.title ?? null,
+          ...(upgrade ? { url: group.url, source: group.source, isTicketing: true } : {}),
+        },
+      });
+      return updated.id;
+    }
+  }
+
+  const key = concertDedupeKey(group);
+  const existingByKey = await prisma.concert.findUnique({ where: { dedupeKey: key } });
+  if (existingByKey) {
+    if (group.isTicketing && !existingByKey.isTicketing) {
+      await prisma.concert.update({
+        where: { id: existingByKey.id },
+        data: { url: group.url, source: group.source, isTicketing: true },
+      });
+    }
+    return existingByKey.id;
+  }
+
+  const created = await prisma.concert.create({
+    data: {
+      dedupeKey: key,
+      artistName: group.artistName,
+      artistNormalized,
+      title: group.title ?? null,
+      date: group.date ?? null,
+      endDate: group.endDate ?? null,
+      city: group.city ?? null,
+      country: group.country ?? null,
+      venue: group.venue ?? null,
+      url: group.url,
+      source: group.source,
+      isTicketing: group.isTicketing,
+    },
+  });
+  return created.id;
+}
+
 /**
  * Daily scan: for every user, run their bands x countries through all
- * enabled sources, dedupe the hits (ticketing wins) and email the concerts
- * the user has not been notified about yet.
+ * enabled sources, dedupe the hits (ticketing wins), merge festival days
+ * into one event and email the concerts the user has not been notified
+ * about yet.
  */
 export async function runScan(): Promise<ScanResult> {
   const providers = enabledProviders();
@@ -63,7 +195,7 @@ export async function runScan(): Promise<ScanResult> {
       }
     }
 
-    // 2) dedupe - when several sources report the same concert, ticketing wins
+    // 2) dedupe exact duplicates - when several sources report the same concert, ticketing wins
     const byKey = new Map<string, ConcertHit>();
     for (const hit of hits) {
       const key = concertDedupeKey(hit);
@@ -71,45 +203,23 @@ export async function runScan(): Promise<ScanResult> {
       if (!existing || (hit.isTicketing && !existing.isTicketing)) byKey.set(key, hit);
     }
 
-    // 3) store concerts (and upgrade a stored record to a ticketing source when possible)
+    // 3) merge consecutive festival days into one multi-day event
+    const groups = groupFestivalDays([...byKey.values()]);
+
+    // 4) store events (reusing overlapping ones, upgrading to ticketing sources)
     const concertIds: string[] = [];
-    for (const [key, hit] of byKey) {
-      const existing = await prisma.concert.findUnique({ where: { dedupeKey: key } });
-      let concert;
-      if (!existing) {
-        concert = await prisma.concert.create({
-          data: {
-            dedupeKey: key,
-            artistName: hit.artistName,
-            artistNormalized: normalizeName(hit.artistName),
-            date: hit.date ?? null,
-            city: hit.city ?? null,
-            country: hit.country ?? null,
-            venue: hit.venue ?? null,
-            url: hit.url,
-            source: hit.source,
-            isTicketing: hit.isTicketing,
-          },
-        });
-      } else if (hit.isTicketing && !existing.isTicketing) {
-        concert = await prisma.concert.update({
-          where: { id: existing.id },
-          data: { url: hit.url, source: hit.source, isTicketing: true },
-        });
-      } else {
-        concert = existing;
-      }
-      concertIds.push(concert.id);
+    for (const group of groups) {
+      concertIds.push(await upsertConcert(group));
     }
     result.concertsFound += concertIds.length;
 
-    // 4) email only the concerts the user has not received yet
+    // 5) email only the concerts the user has not received yet
     const alreadySent = await prisma.notification.findMany({
       where: { userId: user.id, concertId: { in: concertIds } },
       select: { concertId: true },
     });
     const sentIds = new Set(alreadySent.map((n) => n.concertId));
-    const newIds = concertIds.filter((id) => !sentIds.has(id));
+    const newIds = [...new Set(concertIds)].filter((id) => !sentIds.has(id));
     if (newIds.length === 0) continue;
 
     const concerts = await prisma.concert.findMany({
@@ -118,17 +228,27 @@ export async function runScan(): Promise<ScanResult> {
     });
 
     const lines = concerts.map((c) => {
-      const when = c.date ? c.date.toISOString().slice(0, 10) : "date via link";
+      const day = (d: Date) => d.toISOString().slice(0, 10);
+      const when = c.date
+        ? c.endDate
+          ? `${day(c.date)} to ${day(c.endDate)}`
+          : day(c.date)
+        : "date via link";
+      const what = [c.artistName, c.title && c.title !== c.artistName ? c.title : null]
+        .filter(Boolean)
+        .join(" / ");
       const where = [c.venue, c.city, c.country ? countryName(c.country) : null]
         .filter(Boolean)
         .join(", ");
-      return { c, when, where };
+      return { c, what, when, where };
     });
 
     const text = [
       `We found ${concerts.length} new ${concerts.length === 1 ? "show" : "shows"} by bands you follow:`,
       "",
-      ...lines.map(({ c, when, where }) => `- ${c.artistName} – ${when}${where ? ` – ${where}` : ""}\n  ${c.url}`),
+      ...lines.map(
+        ({ c, what, when, where }) => `- ${what} – ${when}${where ? ` – ${where}` : ""}\n  Tickets & info: ${c.url}`
+      ),
     ].join("\n");
 
     const html = `
@@ -136,10 +256,10 @@ export async function runScan(): Promise<ScanResult> {
       <ul>
         ${lines
           .map(
-            ({ c, when, where }) =>
-              `<li style="margin-bottom:10px"><strong>${escapeHtml(c.artistName)}</strong> – ${when}${
+            ({ c, what, when, where }) =>
+              `<li style="margin-bottom:10px"><strong>${escapeHtml(what)}</strong> – ${when}${
                 where ? ` – ${escapeHtml(where)}` : ""
-              }<br/><a href="${c.url}">${c.url}</a></li>`
+              }<br/><a href="${c.url}">Tickets &amp; info</a></li>`
           )
           .join("")}
       </ul>

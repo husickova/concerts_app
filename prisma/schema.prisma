@@ -86,7 +86,9 @@ model Concert {
   dedupeKey        String    @unique
   artistName       String
   artistNormalized String
+  title            String? // event/festival name when known
   date             DateTime?
+  endDate          DateTime? // last day of multi-day events (festivals)
   city             String?
   country          String?
   venue            String?
