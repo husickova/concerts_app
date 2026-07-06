@@ -9,16 +9,21 @@ export default async function HomePage() {
   return (
     <main className="container">
       <div className="hero">
-        <h1>🎸 Koncerty</h1>
+        <span className="kicker">A concert watchdog for people who hate missing out</span>
+        <h1>
+          Gig <em>Alert</em>
+        </h1>
         <p>
-          Zadej kapely a země, které tě zajímají. Jednou denně prohledáme ticketingové weby,
-          koncertní databáze i Google a pošleme ti e-mail, když se objeví nový koncert.
+          Pick your bands and your countries. Once a day we sweep ticketing sites, concert
+          databases and Google — and email you the moment a new show turns up. Every gig,
+          announced once.
         </p>
       </div>
-      <div className="card" style={{ maxWidth: 420, margin: "0 auto" }}>
-        <h2>Přihlášení / registrace</h2>
+      <div className="card" style={{ maxWidth: 460 }}>
+        <span className="kicker">Sign in / sign up</span>
+        <h2>No passwords here</h2>
         <p className="hint">
-          Zadej e-mail a pošleme ti přihlašovací odkaz. Účet se vytvoří automaticky.
+          Drop your email and we&apos;ll send you a magic link. First login creates your account.
         </p>
         <SignInForm />
       </div>

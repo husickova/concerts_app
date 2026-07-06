@@ -2,8 +2,11 @@ export default function CheckEmailPage() {
   return (
     <main className="container">
       <div className="hero">
-        <h1>📬 Zkontroluj si e-mail</h1>
-        <p>Poslali jsme ti přihlašovací odkaz. Klikni na něj a budeš přihlášen(a).</p>
+        <span className="kicker">One more step</span>
+        <h1>
+          Check your <em>inbox</em>
+        </h1>
+        <p>We sent you a sign-in link. Click it and you&apos;re in.</p>
       </div>
     </main>
   );

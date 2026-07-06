@@ -58,7 +58,7 @@ model User {
   spotify       SpotifyAccount?
 }
 
-// --- Aplikace ---
+// --- Application ---
 
 model TrackedArtist {
   id         String   @id @default(cuid())
@@ -75,7 +75,7 @@ model TrackedArtist {
 model TrackedCountry {
   id     String @id @default(cuid())
   userId String
-  code   String // ISO 3166-1 alpha-2, např. "CZ"
+  code   String // ISO 3166-1 alpha-2, e.g. "CZ"
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, code])

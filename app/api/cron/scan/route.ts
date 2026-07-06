@@ -5,9 +5,9 @@ export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 
 /**
- * Denní scan koncertů. Spouští se 1× za 24 h cronem:
- *  - Vercel Cron (viz vercel.json) posílá Authorization: Bearer ${CRON_SECRET}
- *  - nebo systémový cron: curl -H "Authorization: Bearer $CRON_SECRET" .../api/cron/scan
+ * Daily concert scan, triggered once every 24 h by cron:
+ *  - Vercel Cron (see vercel.json) sends Authorization: Bearer ${CRON_SECRET}
+ *  - or system cron: curl -H "Authorization: Bearer $CRON_SECRET" .../api/cron/scan
  */
 export async function GET(req: Request) {
   const secret = process.env.CRON_SECRET;

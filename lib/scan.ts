@@ -2,7 +2,7 @@ import { prisma } from "./prisma";
 import { enabledProviders } from "./providers";
 import { ConcertHit } from "./providers/types";
 import { concertDedupeKey, normalizeName } from "./normalize";
-import { countryNameCs } from "./countries";
+import { countryName } from "./countries";
 import { sendMail } from "./email";
 import { syncSpotifyArtists } from "./spotify";
 
@@ -15,9 +15,9 @@ export type ScanResult = {
 };
 
 /**
- * Denní scan: pro každého uživatele projde jeho kapely × země přes všechny
- * aktivní zdroje, deduplikuje nálezy (ticketing má přednost) a pošle e-mail
- * s koncerty, o kterých uživatel ještě nedostal zprávu.
+ * Daily scan: for every user, run their bands x countries through all
+ * enabled sources, dedupe the hits (ticketing wins) and email the concerts
+ * the user has not been notified about yet.
  */
 export async function runScan(): Promise<ScanResult> {
   const providers = enabledProviders();
@@ -37,7 +37,7 @@ export async function runScan(): Promise<ScanResult> {
   for (const user of users) {
     result.users++;
 
-    // Obnovíme top kapely ze Spotify (pokud je připojené).
+    // Refresh top artists from Spotify (when connected).
     if (user.spotify) {
       try {
         await syncSpotifyArtists(user.id);
@@ -49,7 +49,7 @@ export async function runScan(): Promise<ScanResult> {
     const artists = await prisma.trackedArtist.findMany({ where: { userId: user.id } });
     if (artists.length === 0 || user.countries.length === 0) continue;
 
-    // 1) posbírat nálezy ze všech zdrojů
+    // 1) collect hits from all sources
     const hits: ConcertHit[] = [];
     for (const artist of artists) {
       for (const country of user.countries) {
@@ -63,7 +63,7 @@ export async function runScan(): Promise<ScanResult> {
       }
     }
 
-    // 2) deduplikace – když má víc zdrojů stejný koncert, vyhrává ticketing
+    // 2) dedupe - when several sources report the same concert, ticketing wins
     const byKey = new Map<string, ConcertHit>();
     for (const hit of hits) {
       const key = concertDedupeKey(hit);
@@ -71,7 +71,7 @@ export async function runScan(): Promise<ScanResult> {
       if (!existing || (hit.isTicketing && !existing.isTicketing)) byKey.set(key, hit);
     }
 
-    // 3) uložit koncerty (a případně povýšit uložený záznam na ticketingový zdroj)
+    // 3) store concerts (and upgrade a stored record to a ticketing source when possible)
     const concertIds: string[] = [];
     for (const [key, hit] of byKey) {
       const existing = await prisma.concert.findUnique({ where: { dedupeKey: key } });
@@ -103,7 +103,7 @@ export async function runScan(): Promise<ScanResult> {
     }
     result.concertsFound += concertIds.length;
 
-    // 4) poslat e-mail jen o koncertech, které uživatel ještě nedostal
+    // 4) email only the concerts the user has not received yet
     const alreadySent = await prisma.notification.findMany({
       where: { userId: user.id, concertId: { in: concertIds } },
       select: { concertId: true },
@@ -118,21 +118,21 @@ export async function runScan(): Promise<ScanResult> {
     });
 
     const lines = concerts.map((c) => {
-      const when = c.date ? c.date.toISOString().slice(0, 10) : "termín viz odkaz";
-      const where = [c.venue, c.city, c.country ? countryNameCs(c.country) : null]
+      const when = c.date ? c.date.toISOString().slice(0, 10) : "date via link";
+      const where = [c.venue, c.city, c.country ? countryName(c.country) : null]
         .filter(Boolean)
         .join(", ");
       return { c, when, where };
     });
 
     const text = [
-      `Našli jsme ${concerts.length} ${concerts.length === 1 ? "nový koncert" : "nové koncerty"} podle tvých sledovaných kapel:`,
+      `We found ${concerts.length} new ${concerts.length === 1 ? "show" : "shows"} by bands you follow:`,
       "",
-      ...lines.map(({ c, when, where }) => `• ${c.artistName} – ${when}${where ? ` – ${where}` : ""}\n  ${c.url}`),
+      ...lines.map(({ c, when, where }) => `- ${c.artistName} – ${when}${where ? ` – ${where}` : ""}\n  ${c.url}`),
     ].join("\n");
 
     const html = `
-      <h2>Nové koncerty tvých kapel 🎸</h2>
+      <h2 style="font-family:Georgia,serif;font-style:italic">New shows by your bands</h2>
       <ul>
         ${lines
           .map(
@@ -143,17 +143,17 @@ export async function runScan(): Promise<ScanResult> {
           )
           .join("")}
       </ul>
-      <p style="color:#888;font-size:12px">Každý koncert posíláme jen jednou. Nastavení sledovaných kapel a zemí změníš v aplikaci.</p>
+      <p style="color:#6b6355;font-size:12px">Each concert is announced exactly once. Manage your bands and countries in the app.</p>
     `;
 
     try {
       await sendMail({
         to: user.email!,
-        subject: `🎫 ${concerts.length} ${concerts.length === 1 ? "nový koncert" : "nové koncerty"} tvých kapel`,
+        subject: `${concerts.length} new ${concerts.length === 1 ? "show" : "shows"} by bands you follow`,
         html,
         text,
       });
-      // Zapíšeme notifikace až po úspěšném odeslání – každý koncert jen 1×.
+      // Record notifications only after a successful send - each concert exactly once.
       await prisma.notification.createMany({
         data: newIds.map((concertId) => ({ userId: user.id, concertId })),
       });

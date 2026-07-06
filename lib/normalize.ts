@@ -1,4 +1,4 @@
-/** Normalizace názvu kapely / města pro deduplikaci (bez diakritiky, lowercase). */
+/** Normalize a band/city name for deduplication (strip diacritics, lowercase). */
 export function normalizeName(input: string): string {
   return input
     .normalize("NFD")
@@ -8,7 +8,7 @@ export function normalizeName(input: string): string {
     .trim();
 }
 
-/** Normalizace URL pro deduplikaci (bez query stringu, trailing slashe a www). */
+/** Normalize a URL for deduplication (drop query string, trailing slash and www). */
 export function normalizeUrl(url: string): string {
   try {
     const u = new URL(url);
@@ -21,8 +21,8 @@ export function normalizeUrl(url: string): string {
 }
 
 /**
- * Deduplikační klíč koncertu. Když známe datum a město, deduplikujeme napříč
- * zdroji (artist + den + město); jinak podle normalizované URL.
+ * Concert dedupe key. When we know the date and city we dedupe across
+ * sources (artist + day + city); otherwise by normalized URL.
  */
 export function concertDedupeKey(hit: {
   artistName: string;

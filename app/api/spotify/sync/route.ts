@@ -10,6 +10,6 @@ export async function POST() {
     const added = await syncSpotifyArtists(session.user.id);
     return NextResponse.json({ added });
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message ?? "Spotify sync selhal." }, { status: 500 });
+    return NextResponse.json({ error: e?.message ?? "Spotify sync failed." }, { status: 500 });
   }
 }

@@ -2,8 +2,8 @@ import { ConcertHit, ConcertProvider } from "./types";
 import { countryName } from "@/lib/countries";
 
 /**
- * Bandsintown public API – koncertní databáze (kapely sem často syncují
- * i eventy publikované na Facebooku).
+ * Bandsintown public API - concert database (bands often sync their
+ * Facebook events here too).
  */
 export const bandsintown: ConcertProvider = {
   name: "bandsintown",
@@ -14,7 +14,7 @@ export const bandsintown: ConcertProvider = {
     const res = await fetch(
       `https://rest.bandsintown.com/artists/${encodeURIComponent(artistName)}/events?app_id=${encodeURIComponent(appId)}&date=upcoming`
     );
-    if (res.status === 404) return []; // neznámý interpret
+    if (res.status === 404) return []; // unknown artist
     if (!res.ok) throw new Error(`bandsintown: HTTP ${res.status}`);
     const events = await res.json();
     if (!Array.isArray(events)) return [];

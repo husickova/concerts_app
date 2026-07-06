@@ -1,7 +1,7 @@
 import { ConcertHit, ConcertProvider } from "./types";
 import { countryName } from "@/lib/countries";
 
-/** Domény ticketingových prodejců – takové výsledky mají při deduplikaci přednost. */
+/** Ticketing vendor domains - such results take priority during deduplication. */
 const TICKETING_DOMAINS = [
   "ticketmaster.",
   "ticketportal.",
@@ -17,9 +17,9 @@ const TICKETING_DOMAINS = [
 ];
 
 /**
- * Google Programmable Search API – oficiální cesta ke Google výsledkům.
- * Hledá koncerty na webu včetně facebook.com/events (přímý scraping Googlu
- * a Facebooku je blokovaný a proti podmínkám služeb).
+ * Google Programmable Search API - the official way to query Google results.
+ * Searches the web for concerts including facebook.com/events (scraping
+ * Google or Facebook directly is blocked and against their terms).
  */
 export const googleSearch: ConcertProvider = {
   name: "google",

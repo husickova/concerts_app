@@ -14,7 +14,7 @@ export function SpotifyCard({ connected, configured }: { connected: boolean; con
     const res = await fetch("/api/spotify/sync", { method: "POST" });
     const data = await res.json().catch(() => ({}));
     setBusy(false);
-    setMessage(res.ok ? `Naimportováno ${data.added} nových kapel.` : data?.error ?? "Sync selhal.");
+    setMessage(res.ok ? `Imported ${data.added} new artists.` : data?.error ?? "Sync failed.");
     router.refresh();
   }
 
@@ -28,30 +28,31 @@ export function SpotifyCard({ connected, configured }: { connected: boolean; con
 
   return (
     <div className="card">
-      <h2>Spotify</h2>
+      <span className="kicker">03 / Autopilot</span>
+      <h2>Plug in Spotify</h2>
       <p className="hint">
-        Připoj Spotify a automaticky naimportujeme tvých až 100 nejposlouchanějších interpretů.
-        Seznam se obnovuje při každém denním scanu.
+        Connect your Spotify account and we&apos;ll import up to 100 of your most-played artists
+        automatically. The list refreshes with every daily sweep.
       </p>
       {!configured ? (
         <p className="muted small">
-          Spotify integrace není nakonfigurovaná (chybí SPOTIFY_CLIENT_ID / SECRET).
+          Spotify integration is not configured (missing SPOTIFY_CLIENT_ID / SECRET).
         </p>
       ) : connected ? (
         <div className="row">
-          <button className="spotify" onClick={sync} disabled={busy}>
-            {busy ? "Pracuji…" : "Obnovit kapely ze Spotify"}
+          <button className="accent" onClick={sync} disabled={busy}>
+            {busy ? "Working…" : "Refresh from Spotify"}
           </button>
           <button className="secondary" onClick={disconnect} disabled={busy}>
-            Odpojit
+            Disconnect
           </button>
         </div>
       ) : (
         <a href="/api/spotify/connect">
-          <button className="spotify">Připojit Spotify</button>
+          <button className="accent">Connect Spotify</button>
         </a>
       )}
-      {message && <p className="small" style={{ marginTop: 10 }}>{message}</p>}
+      {message && <p className="small" style={{ marginTop: 12 }}>{message}</p>}
     </div>
   );
 }

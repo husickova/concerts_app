@@ -10,7 +10,7 @@ export async function GET() {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.redirect(new URL("/", process.env.NEXTAUTH_URL));
   if (!spotifyConfigured()) {
-    return NextResponse.json({ error: "Spotify není nakonfigurováno (SPOTIFY_CLIENT_ID/SECRET)." }, { status: 500 });
+    return NextResponse.json({ error: "Spotify is not configured (SPOTIFY_CLIENT_ID/SECRET)." }, { status: 500 });
   }
 
   const state = crypto.randomBytes(16).toString("hex");

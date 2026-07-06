@@ -20,12 +20,12 @@ export function SignInForm() {
         <input
           type="email"
           required
-          placeholder="tvuj@email.cz"
+          placeholder="you@example.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
         <button type="submit" disabled={loading}>
-          {loading ? "Posílám…" : "Poslat odkaz"}
+          {loading ? "Sending…" : "Send link"}
         </button>
       </div>
     </form>

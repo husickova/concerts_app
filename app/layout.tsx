@@ -2,14 +2,14 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Koncerty – hlídač koncertů tvých kapel",
+  title: "Gig Alert – never miss a show",
   description:
-    "Sleduj své oblíbené kapely a dostávej e-mail, když se objeví nový koncert ve tvé zemi.",
+    "Track your favourite bands and get an email whenever a new concert pops up in your country.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="cs">
+    <html lang="en">
       <body>{children}</body>
     </html>
   );

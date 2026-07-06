@@ -10,16 +10,16 @@ export const authOptions: NextAuthOptions = {
   pages: { signIn: "/", verifyRequest: "/check-email" },
   providers: [
     EmailProvider({
-      from: process.env.EMAIL_FROM ?? "koncerty@localhost",
-      maxAge: 60 * 60, // odkaz platí hodinu
+      from: process.env.EMAIL_FROM ?? "gigalert@localhost",
+      maxAge: 60 * 60, // link valid for one hour
       async sendVerificationRequest({ identifier, url }) {
         await sendMail({
           to: identifier,
-          subject: "Přihlášení do Koncertů",
-          text: `Přihlas se kliknutím na odkaz:\n${url}\n\nOdkaz platí 1 hodinu.`,
-          html: `<p>Přihlas se kliknutím na tlačítko:</p>
-                 <p><a href="${url}" style="display:inline-block;padding:10px 18px;background:#7c3aed;color:#fff;border-radius:8px;text-decoration:none">Přihlásit se</a></p>
-                 <p style="color:#888;font-size:12px">Odkaz platí 1 hodinu. Pokud jsi o přihlášení nežádal(a), e-mail ignoruj.</p>`,
+          subject: "Your Gig Alert sign-in link",
+          text: `Click the link to sign in:\n${url}\n\nThe link is valid for 1 hour.`,
+          html: `<p>Click the button to sign in:</p>
+                 <p><a href="${url}" style="display:inline-block;padding:10px 18px;background:#211d17;color:#f6f1e5;text-decoration:none;font-family:Courier,monospace;letter-spacing:1px;text-transform:uppercase">Sign in</a></p>
+                 <p style="color:#6b6355;font-size:12px">The link is valid for 1 hour. If you didn't request it, just ignore this email.</p>`,
         });
       },
     }),

@@ -38,19 +38,18 @@ export function CountryPicker({
           const checked = codes.has(c.code);
           return (
             <label key={c.code} className={`country-item${checked ? " checked" : ""}`}>
-              <input
-                type="checkbox"
-                checked={checked}
-                onChange={() => toggle(c.code)}
-                style={{ accentColor: "#7c3aed" }}
-              />
+              <input type="checkbox" checked={checked} onChange={() => toggle(c.code)} />
               {c.name}
             </label>
           );
         })}
       </div>
       <p className="muted small" style={{ marginTop: 10, minHeight: 20 }}>
-        {saving ? "Ukládám…" : codes.size === 0 ? "Vyber alespoň jednu zemi, jinak nebudeme hledat." : ""}
+        {saving
+          ? "Saving…"
+          : codes.size === 0
+            ? "Tick at least one country, otherwise we have nowhere to look."
+            : ""}
       </p>
     </div>
   );

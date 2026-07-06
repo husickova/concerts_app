@@ -38,7 +38,7 @@ export async function GET(req: Request) {
       },
     });
 
-    // Rovnou importujeme top kapely.
+    // Import top artists right away.
     const added = await syncSpotifyArtists(session.user.id);
     return NextResponse.redirect(new URL(`/dashboard?spotify=connected&added=${added}`, base));
   } catch (e) {

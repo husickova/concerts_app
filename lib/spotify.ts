@@ -49,7 +49,7 @@ export async function exchangeCode(code: string) {
   );
 }
 
-/** Vrátí platný access token uživatele; když expiroval, obnoví ho přes refresh token. */
+/** Return a valid access token for the user, refreshing it when expired. */
 export async function getAccessToken(userId: string): Promise<string | null> {
   const account = await prisma.spotifyAccount.findUnique({ where: { userId } });
   if (!account) return null;
@@ -69,9 +69,9 @@ export async function getAccessToken(userId: string): Promise<string | null> {
   return updated.accessToken;
 }
 
-/** Stáhne top interprety (short/medium/long term, po 50) – dohromady až ~100 unikátních. */
+/** Fetch top artists (short/medium/long term, 50 each) - up to ~100 unique in total. */
 export async function fetchTopArtists(accessToken: string): Promise<string[]> {
-  const names = new Map<string, string>(); // normalized -> původní jméno
+  const names = new Map<string, string>(); // normalized -> original name
   for (const range of ["long_term", "medium_term", "short_term"]) {
     const res = await fetch(`${API}/me/top/artists?limit=50&time_range=${range}`, {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -90,7 +90,7 @@ export async function fetchTopArtists(accessToken: string): Promise<string[]> {
   return [...names.values()];
 }
 
-/** Importuje top interprety uživatele ze Spotify jako sledované kapely. */
+/** Import the user's Spotify top artists as tracked bands. */
 export async function syncSpotifyArtists(userId: string): Promise<number> {
   const token = await getAccessToken(userId);
   if (!token) return 0;

@@ -2,7 +2,7 @@ import { ConcertHit, ConcertProvider } from "./types";
 import { normalizeName } from "@/lib/normalize";
 
 /**
- * Ticketmaster Discovery API – oficiální ticketingový zdroj.
+ * Ticketmaster Discovery API - the official ticketing source.
  * https://developer.ticketmaster.com/products-and-docs/apis/discovery-api/v2/
  */
 export const ticketmaster: ConcertProvider = {
@@ -26,7 +26,7 @@ export const ticketmaster: ConcertProvider = {
 
     return events
       .filter((ev) => {
-        // Keyword search vrací i nesouvisející akce – ověříme jméno interpreta.
+        // Keyword search also returns unrelated events - verify the artist name.
         const attractions: any[] = ev?._embedded?.attractions ?? [];
         const names = [ev?.name, ...attractions.map((a) => a?.name)].filter(Boolean);
         return names.some((n: string) => normalizeName(n).includes(wanted));

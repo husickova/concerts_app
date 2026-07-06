@@ -24,7 +24,7 @@ export function ArtistManager({ artists }: { artists: Artist[] }) {
     setBusy(false);
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      setError(data?.error ?? "Přidání se nepovedlo.");
+      setError(data?.error ?? "Could not add the band.");
       return;
     }
     setName("");
@@ -41,22 +41,22 @@ export function ArtistManager({ artists }: { artists: Artist[] }) {
       <form onSubmit={add} className="row">
         <input
           type="text"
-          placeholder="např. Rammstein"
+          placeholder="e.g. Fontaines D.C."
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
         <button type="submit" disabled={busy}>
-          Přidat
+          Add
         </button>
       </form>
-      {error && <p className="small" style={{ color: "#f8a5a5", marginTop: 8 }}>{error}</p>}
+      {error && <p className="error-text">{error}</p>}
       <div className="chips">
-        {artists.length === 0 && <span className="muted small">Zatím žádné kapely.</span>}
+        {artists.length === 0 && <span className="muted small">No bands yet — add your first.</span>}
         {artists.map((a) => (
           <span key={a.id} className={`chip${a.source === "spotify" ? " spotify-src" : ""}`}>
             {a.name}
-            <button type="button" title="Odebrat" onClick={() => remove(a.id)}>
-              ✕
+            <button type="button" title="Remove" onClick={() => remove(a.id)}>
+              ×
             </button>
           </span>
         ))}

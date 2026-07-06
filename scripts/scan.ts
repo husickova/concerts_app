@@ -1,7 +1,7 @@
 /**
- * Ruční / cronové spuštění denního scanu bez HTTP:
+ * Manual / cron entry point for the daily scan without HTTP:
  *   npm run scan
- * Systémový cron (1× denně v 8:00):
+ * System cron (daily at 8:00):
  *   0 8 * * * cd /path/to/app && npm run scan >> scan.log 2>&1
  */
 import { runScan } from "../lib/scan";

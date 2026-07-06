@@ -6,7 +6,7 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  // deleteMany s userId zaručí, že uživatel maže jen své záznamy
+  // deleteMany scoped to userId guarantees users can only delete their own records
   await prisma.trackedArtist.deleteMany({
     where: { id: params.id, userId: session.user.id },
   });
