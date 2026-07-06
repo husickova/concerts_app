@@ -10,12 +10,12 @@ export const authOptions: NextAuthOptions = {
   pages: { signIn: "/", verifyRequest: "/check-email" },
   providers: [
     EmailProvider({
-      from: process.env.EMAIL_FROM ?? "party@localhost",
+      from: process.env.EMAIL_FROM ?? "music@localhost",
       maxAge: 60 * 60, // link valid for one hour
       async sendVerificationRequest({ identifier, url }) {
         await sendMail({
           to: identifier,
-          subject: "Your sign-in link for Where's the Party?",
+          subject: "Your sign-in link for Where's the Music?",
           text: `Click the link to sign in:\n${url}\n\nThe link is valid for 1 hour.`,
           html: `<p>Click the button to sign in:</p>
                  <p><a href="${url}" style="display:inline-block;padding:10px 18px;background:#211d17;color:#f6f1e5;text-decoration:none;font-family:Courier,monospace;letter-spacing:1px;text-transform:uppercase">Sign in</a></p>

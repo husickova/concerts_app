@@ -8,7 +8,7 @@ export function getTransport() {
 
 export async function sendMail(opts: { to: string; subject: string; html: string; text: string }) {
   const transport = getTransport();
-  const from = process.env.EMAIL_FROM ?? "party@localhost";
+  const from = process.env.EMAIL_FROM ?? "music@localhost";
   if (!transport) {
     // Development without SMTP: just print the email to the console.
     console.log(`\n=== EMAIL (SMTP not configured) ===\nTo: ${opts.to}\nSubject: ${opts.subject}\n\n${opts.text}\n===================================\n`);

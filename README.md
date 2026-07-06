@@ -1,4 +1,4 @@
-# Where's the Party?
+# Where's the Music?
 
 A web app that watches for concerts by your favourite bands and emails you when a new show appears.
 
@@ -27,38 +27,62 @@ To add another source, implement the `ConcertProvider` interface in `lib/provide
 
 ## Running locally
 
+The schema targets Postgres (that's what production runs on). Easiest local setup is a
+free [Neon](https://neon.tech) database — create a project, copy the connection string:
+
 ```bash
-cp .env.example .env      # fill in NEXTAUTH_SECRET and the API keys you want to use
+cp .env.example .env      # fill in DATABASE_URL, NEXTAUTH_SECRET and any API keys
 npm install
-npm run db:push           # creates the SQLite database
+npm run db:push           # creates the tables
 npm run dev               # http://localhost:3000
 ```
+
+Alternatively run Postgres in Docker (`docker run -e POSTGRES_PASSWORD=dev -p 5432:5432 postgres`)
+and use `DATABASE_URL="postgres://postgres:dev@localhost:5432/postgres"`. If you prefer a
+zero-dependency SQLite setup for hacking, change `provider` to `"sqlite"` in
+`prisma/schema.prisma` and set `DATABASE_URL="file:./dev.db"` — just don't commit that change.
 
 Without `EMAIL_SERVER` (SMTP) configured, sign-in links and notification emails are
 printed to the server console — handy for development.
 
-## Daily scan
+## Deploying to Vercel
 
-Two options, both run the same logic (`lib/scan.ts`):
+The repo is Vercel-ready: `vercel.json` schedules the daily scan, and the build script
+runs `prisma generate` automatically.
 
-1. **HTTP endpoint** `GET /api/cron/scan`, protected by a token:
+1. **Database — Neon.** Create a free project at [neon.tech](https://neon.tech) and copy
+   the connection string. Create the tables by running locally:
    ```bash
-   curl -H "Authorization: Bearer $CRON_SECRET" https://your-domain/api/cron/scan
+   DATABASE_URL="postgres://...neon.tech/..." npx prisma db push
    ```
-   On Vercel, `vercel.json` schedules it daily at 8:00 (Vercel Cron adds the header automatically).
-
-2. **CLI**: `npm run scan` — for system cron:
-   ```cron
-   0 8 * * * cd /path/to/app && npm run scan >> scan.log 2>&1
+2. **Email — Resend.** Sign up at [resend.com](https://resend.com) (free tier: 100
+   emails/day), verify your domain (or use their test domain to start), create an API key.
+   SMTP values: `EMAIL_SERVER="smtp://resend:YOUR_API_KEY@smtp.resend.com:587"`. Any other
+   SMTP provider works too.
+3. **Import the repo** at [vercel.com/new](https://vercel.com/new) — pick this GitHub repo,
+   framework auto-detects as Next.js.
+4. **Environment variables** (Project → Settings → Environment Variables): everything from
+   `.env.example` — `DATABASE_URL`, `NEXTAUTH_URL` (your production URL, e.g.
+   `https://your-app.vercel.app`), `NEXTAUTH_SECRET` (`openssl rand -base64 32`),
+   `EMAIL_SERVER`, `EMAIL_FROM`, `CRON_SECRET` (random string; Vercel Cron sends it
+   automatically as the Authorization header), plus the concert-source and Spotify keys
+   you use.
+5. **Deploy.** Vercel builds on every push to the production branch.
+6. **Spotify** (optional): in the [Spotify dashboard](https://developer.spotify.com/dashboard)
+   add the redirect URI `https://your-app.vercel.app/api/spotify/callback`.
+7. **Check the cron**: Project → Settings → Cron Jobs should list `/api/cron/scan`
+   (daily at 8:00 UTC). Trigger it manually anytime with:
+   ```bash
+   curl -H "Authorization: Bearer $CRON_SECRET" https://your-app.vercel.app/api/cron/scan
    ```
 
-## Deploying to production
+Note: on the Hobby plan cron jobs run once a day at an approximate time, which is exactly
+what this app needs.
 
-- Set `NEXTAUTH_URL` to the public URL and strong values for `NEXTAUTH_SECRET` + `CRON_SECRET`.
-- Configure SMTP (`EMAIL_SERVER`, `EMAIL_FROM`) — sign-in links won't be delivered without it.
-- Add the redirect URI `{NEXTAUTH_URL}/api/spotify/callback` in the Spotify dashboard.
-- SQLite is fine for small deployments; for Postgres change `provider = "postgresql"`
-  in `prisma/schema.prisma`, set `DATABASE_URL` and run `npx prisma db push`.
+## Self-hosting instead
+
+Any Node host works (Railway, Render, a VPS): `npm run build && npm start`, and schedule
+`npm run scan` with system cron. On a persistent server you can also keep SQLite.
 
 ## Architecture
 

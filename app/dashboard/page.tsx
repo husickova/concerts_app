@@ -31,7 +31,7 @@ export default async function DashboardPage({
   return (
     <main className="container">
       <div className="topbar">
-        <span className="brand">Where&apos;s the Party?</span>
+        <span className="brand">Where&apos;s the Music?</span>
         <div className="row" style={{ alignItems: "center" }}>
           <span className="email">{session.user.email}</span>
           <SignOutButton />
