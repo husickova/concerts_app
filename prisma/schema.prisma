@@ -1,0 +1,122 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// --- NextAuth ---
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+
+  accounts      Account[]
+  sessions      Session[]
+  artists       TrackedArtist[]
+  countries     TrackedCountry[]
+  notifications Notification[]
+  spotify       SpotifyAccount?
+}
+
+// --- Aplikace ---
+
+model TrackedArtist {
+  id         String   @id @default(cuid())
+  userId     String
+  name       String
+  normalized String
+  source     String   @default("manual") // manual | spotify
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, normalized])
+}
+
+model TrackedCountry {
+  id     String @id @default(cuid())
+  userId String
+  code   String // ISO 3166-1 alpha-2, např. "CZ"
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, code])
+}
+
+model Concert {
+  id               String    @id @default(cuid())
+  dedupeKey        String    @unique
+  artistName       String
+  artistNormalized String
+  date             DateTime?
+  city             String?
+  country          String?
+  venue            String?
+  url              String
+  source           String // ticketmaster | bandsintown | google
+  isTicketing      Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+
+  notifications Notification[]
+
+  @@index([artistNormalized])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  concertId String
+  sentAt    DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  concert   Concert  @relation(fields: [concertId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, concertId])
+}
+
+model SpotifyAccount {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  spotifyId    String?
+  accessToken  String
+  refreshToken String
+  expiresAt    DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
