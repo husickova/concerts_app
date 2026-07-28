@@ -431,6 +431,13 @@ def cmd_resolve_tags(args):
 def cmd_plan(args):
     entries, tz_name = load_draft(args.file)
     print_table(entries)
+
+    if args.offline:
+        print("\nOffline: draft validated, but existing Clockify entries were not "
+              "checked.\nRe-run `plan` without --offline before creating, so "
+              "duplicates get caught.")
+        return
+
     problems = find_conflicts(entries, tz_name)
     if problems:
         print("\nPotential duplicates / conflicts:")
@@ -505,6 +512,8 @@ def main():
 
     p_plan = subs.add_parser("plan", help="validate a draft and check for duplicates")
     p_plan.add_argument("--file", required=True)
+    p_plan.add_argument("--offline", action="store_true",
+                        help="validate and show the table without contacting Clockify")
     p_plan.set_defaults(func=cmd_plan)
 
     p_create = subs.add_parser("create", help="create the entries in a draft")

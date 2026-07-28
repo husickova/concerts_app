@@ -181,6 +181,15 @@ the user, including any warnings — a flagged overlap is usually the user
 re-logging something they already logged, and they are the only one who can tell
 you whether it's a genuine duplicate or two different meetings back to back.
 
+If Clockify is unreachable — no API key, or a session whose egress policy blocks
+`api.clockify.me` — `plan --offline` still validates the draft and prints the
+table. That's worth doing even when the entries can't be created from here: the
+part that needs the user (what they worked on, which project, which Epic) gets
+settled while they're present, and the draft file carries it over to a session
+that can submit. Save the draft somewhere durable in that case, and tell the user
+where it is and which command finishes the job. Never present an offline run as
+if the time had been logged.
+
 Then ask, and wait:
 
 > Souhlasíš? Můžeš upravit cokoliv, nebo řekni OK pro vytvoření.
