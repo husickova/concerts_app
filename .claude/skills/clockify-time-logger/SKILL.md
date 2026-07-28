@@ -30,9 +30,24 @@ get subtly wrong, and a one-hour shift in a time entry is hard to spot in review
 
 ## Setup
 
+Every command below runs the bundled script, so resolve its path once per
+session from this skill's own base directory (Claude Code prints that directory
+when the skill loads) and reuse the variable:
+
+```bash
+SKILL_DIR=~/.claude/skills/clockify-time-logger   # personal install
+CLOCKIFY="python3 $SKILL_DIR/scripts/clockify.py"
+```
+
+Deriving it from the skill's base directory rather than assuming a repo-relative
+path matters because this skill is meant to live in `~/.claude/skills/` — a
+relative path only works when the session happens to start in the repo that
+carries a copy.
+
 Constants (workspace, user, project IDs, billable defaults) live in the script.
 Read `references/reference_clockify_ids.md` for the Epic → tag cache and
-`references/feedback_clockify_projects.md` for the meeting → project rules.
+`references/feedback_clockify_projects.md` for the meeting → project rules —
+both sit next to SKILL.md, so read them relative to the same base directory.
 
 The Clockify API key is read automatically from `CLOCKIFY_API_TOKEN` or from
 `~/.mcp.json` / `~/.claude.json` under the `clockify-time-entries` server env.
@@ -42,8 +57,13 @@ Confirm access before doing anything else, so an auth problem surfaces now
 rather than after the user has typed out their whole week:
 
 ```bash
-python3 .claude/skills/clockify-time-logger/scripts/clockify.py whoami
+$CLOCKIFY whoami
 ```
+
+A missing key means the session can't reach Clockify at all — say so and stop,
+rather than collecting the user's hours into a draft that can't be submitted.
+This is the usual symptom of running in a cloud or remote session, which doesn't
+inherit local MCP config; the fix is to run in a local session, not to retry.
 
 ## Phase 1 — Fetch tickets and show the list
 
@@ -152,7 +172,7 @@ there is no way to get that pairing wrong:
 ### 2.3 Show the draft and the duplicate check
 
 ```bash
-python3 .claude/skills/clockify-time-logger/scripts/clockify.py plan --file /tmp/draft.json
+$CLOCKIFY plan --file /tmp/draft.json
 ```
 
 This prints the table with per-day and overall totals, and flags overlaps both
@@ -171,7 +191,7 @@ rebuild the draft and show the table again.
 ## Phase 3 — Create
 
 ```bash
-python3 .claude/skills/clockify-time-logger/scripts/clockify.py create --file /tmp/draft.json
+$CLOCKIFY create --file /tmp/draft.json
 ```
 
 The script resolves each tag (creating Epic tags that don't exist yet), creates
@@ -192,5 +212,5 @@ For "kolik mám nalogováno" style questions, no gates and no drafting are neede
 — just read and report:
 
 ```bash
-python3 .claude/skills/clockify-time-logger/scripts/clockify.py entries --date 2026-04-10 --date 2026-04-11
+$CLOCKIFY entries --date 2026-04-10 --date 2026-04-11
 ```
