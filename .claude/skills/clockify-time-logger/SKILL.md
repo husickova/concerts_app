@@ -208,6 +208,12 @@ every entry, and prints a per-entry status table with a created/failed count. It
 refuses to run if the overlap check still finds problems; pass `--force` only
 when the user has looked at those warnings and confirmed they're fine.
 
+`create --dry-run` prints the exact request bodies and sends nothing. Reach for
+it when something about the setup is unverified — a constant that might be wrong,
+a first run on a new machine, or a day where the entries look surprising — since
+seeing the UTC timestamps and resolved tag IDs before they're written is cheaper
+than deleting entries afterwards.
+
 Report the result table back. If any entry failed, show the error and offer to
 retry just the failures — a partial success is normal (a network blip on entry 4
 of 6) and the user should not have to re-enter the whole day.

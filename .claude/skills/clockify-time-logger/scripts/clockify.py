@@ -447,9 +447,46 @@ def cmd_plan(args):
         print("\nNo overlaps with existing Clockify entries.")
 
 
+def build_body(entry, tag_ids):
+    return {
+        "start": to_utc_z(entry["start_local"]),
+        "end": to_utc_z(entry["end_local"]),
+        "description": entry["description"],
+        "projectId": entry["projectId"],
+        "billable": entry["billable"],
+        "tagIds": [tag_ids[t] for t in entry["tags"] if tag_ids.get(t)],
+    }
+
+
 def cmd_create(args):
     entries, tz_name = load_draft(args.file)
     print_table(entries)
+
+    tag_names = [t for e in entries for t in e["tags"]]
+
+    if args.dry_run:
+        # Resolve read-only so a dry run never has a side effect, and tolerate a
+        # missing key or blocked host so the request shape can still be reviewed.
+        tag_ids, missing, note = {}, [], None
+        if tag_names:
+            try:
+                tag_ids, _ = resolve_tags(tag_names, create_missing=False)
+                missing = [n for n, v in tag_ids.items() if not v]
+            except (RuntimeError, SystemExit) as exc:
+                note = f"could not reach Clockify to resolve tags ({exc})"
+
+        print("\nDry run — nothing was sent. Request bodies that would be POSTed:")
+        for entry in entries:
+            print(f"\n  {day_label(entry['date'])} {entry['start_text']}-{entry['end_text']}")
+            print("  " + json.dumps(build_body(entry, tag_ids), ensure_ascii=False))
+        if missing:
+            print(f"\nTags that do not exist yet and would be created: {', '.join(missing)}")
+        if note:
+            print(f"\nNote: {note}")
+            print("tagIds above are therefore empty — re-run the dry run with access "
+                  "to Clockify to see the real values.")
+        print("\nDuplicate check was skipped. Run `plan` (read-only) for that.")
+        return
 
     problems = find_conflicts(entries, tz_name)
     if problems:
@@ -459,7 +496,6 @@ def cmd_create(args):
         if not args.force:
             sys.exit("\nRefusing to create. Resolve these, or pass --force if intended.")
 
-    tag_names = [t for e in entries for t in e["tags"]]
     tag_ids, created = resolve_tags(tag_names) if tag_names else ({}, [])
     if created:
         print(f"\nCreated new tags: {', '.join(created)} — record them in "
@@ -468,14 +504,7 @@ def cmd_create(args):
     print()
     results, failures = [], 0
     for entry in entries:
-        body = {
-            "start": to_utc_z(entry["start_local"]),
-            "end": to_utc_z(entry["end_local"]),
-            "description": entry["description"],
-            "projectId": entry["projectId"],
-            "billable": entry["billable"],
-            "tagIds": [tag_ids[t] for t in entry["tags"] if tag_ids.get(t)],
-        }
+        body = build_body(entry, tag_ids)
         label = f"{day_label(entry['date'])} {entry['start_text']}-{entry['end_text']}  {entry['description']}"
         try:
             request("POST", f"/workspaces/{WORKSPACE_ID}/time-entries", body=body)
@@ -519,6 +548,8 @@ def main():
     p_create = subs.add_parser("create", help="create the entries in a draft")
     p_create.add_argument("--file", required=True)
     p_create.add_argument("--force", action="store_true", help="create despite overlap warnings")
+    p_create.add_argument("--dry-run", action="store_true",
+                          help="show the exact request bodies without sending anything")
     p_create.set_defaults(func=cmd_create)
 
     args = parser.parse_args()
